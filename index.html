@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Farm Simulator Ultimate</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #b3e5fc;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+    #farm {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+      gap: 10px;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    .plot {
+      width: 80px;
+      height: 80px;
+      background: #8bc34a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border: 2px solid #558b2f;
+      font-size: 12px;
+      user-select: none;
+      transition: background 0.5s;
+    }
+    .empty { background: #8bc34a; }
+    .planted { background: #ffeb3b; }
+    .grown { background: #4caf50; }
+    .golden { background: gold; }
+    .animal { background: #ffab91; }
+    .barn { background: #d7ccc8; }
+    .silo { background: #c5cae9; }
+    #money, #weather {
+      font-size: 24px;
+      margin: 10px 0;
+    }
+    button {
+      margin: 5px;
+      padding: 10px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Farm Simulator Ultimate 🚜</h1>
+
+<div id="money">Money: $50</div>
+<div id="weather">Weather: Sunny</div>
+
+<div>
+  <button onclick="plantAll()">Plant All ($5 each)</button>
+  <button onclick="harvestAll()">Harvest All (+$15 each)</button>
+  <button onclick="buyPlot()">Buy New Plot ($50)</button>
+  <button onclick="buyCow()">Buy Cow ($100)</button>
+  <button onclick="buyFasterSeeds()">Upgrade Seeds ($100)</button>
+  <button onclick="buyBarn()">Buy Barn ($150)</button>
+  <button onclick="buySilo()">Buy Silo ($200)</button>
+  <button onclick="saveGame()">Save Game</button>
+  <button onclick="loadGame()">Load Game</button>
+</div>
+
+<div id="farm"></div>
+
+<script>
+  const farm = [];
+  let money = 50;
+  let growthSpeed = 5;
+  let weather = 'Sunny';
+  let rainBonus = 0;
+  let hasBarn = false;
+  let hasSilo = false;
+
+  function createInitialFarm() {
+    const farmDiv = document.getElementById('farm');
+    farmDiv.innerHTML = '';
+    for (let i = 0; i < 10; i++) {
+      addPlot();
+    }
+  }
+
+  function addPlot(type = 'empty') {
+    const farmDiv = document.getElementById('farm');
+    const plot = { status: type, timer: 0, type: 'normal' };
+    farm.push(plot);
+
+    const plotDiv = document.createElement('div');
+    plotDiv.className = 'plot ' + type;
+    plotDiv.innerText = type === 'animal' ? 'Cow 🐄' : 'Empty';
+    plotDiv.onclick = () => handlePlotClick(farm.length - 1);
+    farmDiv.appendChild(plotDiv);
+  }
+
+  function handlePlotClick(index) {
+    const plot = farm[index];
+    if (plot.status === 'empty') {
+      plantCrop(index);
+    } else if (plot.status === 'grown' || plot.status === 'golden') {
+      harvestCrop(index);
+    } else if (plot.status === 'animal') {
+      milkCow(index);
+    }
+  }
+
+  function plantCrop(index) {
+    const plot = farm[index];
+    if (money >= 5 && plot.status === 'empty') {
+      money -= 5;
+      plot.status = 'planted';
+      plot.timer = 0;
+      plot.type = Math.random() < 0.05 ? 'golden' : 'normal'; // 5% chance golden crop
+      updateFarm();
+    }
+  }
+
+  function harvestCrop(index) {
+    const plot = farm[index];
+    if (plot.status === 'grown' || plot.status === 'golden') {
+      if (plot.type === 'golden') {
+        money += 100;
+      } else {
+        money += hasBarn ? 25 : 15; // Barn boosts harvest value
+      }
+      plot.status = 'empty';
+      plot.timer = 0;
+      plot.type = 'normal';
+      updateFarm();
+    }
+  }
+
+  function milkCow(index) {
+    const plot = farm[index];
+    if (plot.status === 'animal') {
+      money += hasBarn ? 20 : 10; // Barn boosts milk value
+      alert('You milked the cow! +' + (hasBarn ? '$20' : '$10'));
+      updateFarm();
+    }
+  }
+
+  function updateFarm() {
+    const farmDiv = document.getElementById('farm');
+    const plots = farmDiv.children;
+    for (let i = 0; i < farm.length; i++) {
+      const plot = farm[i];
+      const plotDiv = plots[i];
+      plotDiv.className = 'plot ' + plot.status;
+      if (plot.status === 'empty') {
+        plotDiv.innerText = 'Empty';
+      } else if (plot.status === 'planted') {
+        plotDiv.innerText = 'Growing...';
+      } else if (plot.status === 'grown') {
+        plotDiv.innerText = 'Harvest!';
+      } else if (plot.status === 'golden') {
+        plotDiv.innerText = '🌟 Golden!';
+      } else if (plot.status === 'animal') {
+        plotDiv.innerText = 'Cow 🐄';
+      } else if (plot.status === 'barn') {
+        plotDiv.innerText = 'Barn 🏠';
+      } else if (plot.status === 'silo') {
+        plotDiv.innerText = 'Silo 🛖';
+      }
+    }
+    document.getElementById('money').innerText = `Money: $${money}`;
+  }
+
+  function growCrops() {
+    for (let i = 0; i < farm.length; i++) {
+      const plot = farm[i];
+      if (plot.status === 'planted') {
+        plot.timer += 1 + rainBonus;
+        if (plot.timer >= growthSpeed) {
+          plot.status = plot.type === 'golden' ? 'golden' : 'grown';
+        }
+      }
+    }
+    updateFarm();
+  }
+
+  function plantAll() {
+    for (let i = 0; i < farm.length; i++) {
+      if (farm[i].status === 'empty') {
+        plantCrop(i);
+      }
+    }
+  }
+
+  function harvestAll() {
+    for (let i = 0; i < farm.length; i++) {
+      if (farm[i].status === 'grown' || farm[i].status === 'golden') {
+        harvestCrop(i);
+      }
+    }
+  }
+
+  function buyPlot() {
+    if (money >= 50) {
+      money -= 50;
+      addPlot();
+      updateFarm();
+    } else {
+      alert('Not enough money!');
+    }
+  }
+
+  function buyCow() {
+    if (money >= 100) {
+      money -= 100;
+      addPlot('animal');
+      updateFarm();
+    } else {
+      alert('Not enough money!');
+    }
+  }
+
+  function buyFasterSeeds() {
+    if (money >= 100) {
+      money -= 100;
+      growthSpeed = Math.max(2, growthSpeed - 1); 
+      alert('Seeds upgraded! Faster growth!');
+      updateFarm();
+    } else {
+      alert('Not enough money!');
+    }
+  }
+
+  function buyBarn() {
+    if (money >= 150 && !hasBarn) {
+      money -= 150;
+      hasBarn = true;
+      alert('Barn built! Harvests worth more!');
+      updateFarm();
+    } else if (hasBarn) {
+      alert('You already have a barn!');
+    } else {
+      alert('Not enough money!');
+    }
+  }
+
+  function buySilo() {
+    if (money >= 200 && !hasSilo) {
+      money -= 200;
+      hasSilo = true;
+      alert('Silo built! Crops grow faster after rain!');
+      rainBonus += 1;
+      updateFarm();
+    } else if (hasSilo) {
+      alert('You already have a silo!');
+    } else {
+      alert('Not enough money!');
+    }
+  }
+
+  function changeWeather() {
+    if (Math.random() < 0.3) {
+      weather = 'Rainy';
+      rainBonus = hasSilo ? 2 : 1;
+    } else {
+      weather = 'Sunny';
+      rainBonus = hasSilo ? 1 : 0;
+    }
+    document.getElementById('weather').innerText = `Weather: ${weather}`;
+  }
+
+  function saveGame() {
+    const saveData = {
+      money, growthSpeed, weather, rainBonus, hasBarn, hasSilo, farm
+    };
+    localStorage.setItem('farmSave', JSON.stringify(saveData));
+    alert('Game saved!');
+  }
+
+  function loadGame() {
+    const saveData = JSON.parse(localStorage.getItem('farmSave'));
+    if (saveData) {
+      money = saveData.money;
+      growthSpeed = saveData.growthSpeed;
+      weather = saveData.weather;
+      rainBonus = saveData.rainBonus;
+      hasBarn = saveData.hasBarn;
+      hasSilo = saveData.hasSilo;
+      farm.length = 0;
+      saveData.farm.forEach(p => farm.push(p));
+      rebuildFarm();
+      updateFarm();
+      alert('Game loaded!');
+    } else {
+      alert('No saved game found!');
+    }
+  }
+
+  function rebuildFarm() {
+    const farmDiv = document.getElementById('farm');
+    farmDiv.innerHTML = '';
+    for (let i = 0; i < farm.length; i++) {
+      const plot = farm[i];
+      const plotDiv = document.createElement('div');
+      plotDiv.className = 'plot ' + plot.status;
+      plotDiv.innerText = plot.status === 'animal' ? 'Cow 🐄' : plot.status.charAt(0).toUpperCase() + plot.status.slice(1);
+      plotDiv.onclick = () => handlePlotClick(i);
+      farmDiv.appendChild(plotDiv);
+    }
+  }
+
+  setInterval(growCrops, 1000);
+  setInterval(changeWeather, 10000);
+
+  createInitialFarm();
+  updateFarm();
+</script>
+
+</body>
+</html>
